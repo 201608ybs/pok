@@ -48,6 +48,8 @@ void pok_sched (void);      /* Main scheduling function, this function
                              * schedules everything
                              */
 
+#define THREAD_PRIORITY_MIN 0
+#define THREAD_PRIORITY_MAX 255
 /* Get priority function, return are made according to a scheduler */
 uint8_t pok_sched_get_priority_min (const pok_sched_t sched_type);
 uint8_t pok_sched_get_priority_max (const pok_sched_t sched_type);
@@ -56,6 +58,10 @@ uint8_t pok_sched_get_priority_max (const pok_sched_t sched_type);
 uint8_t pok_sched_election (void);
 uint32_t pok_sched_part_rr (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
 uint32_t pok_sched_part_rms (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+/* Preemptive-FP, Preemptive-EDF, Weighted-RR Scheduler for threads */
+uint32_t pok_sched_part_fp (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+uint32_t pok_sched_part_edf (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+uint32_t pok_sched_part_wrr (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
 
 /* Context switch functions */
 void pok_sched_context_switch (const uint32_t);

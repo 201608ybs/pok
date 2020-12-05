@@ -502,6 +502,65 @@ uint32_t pok_sched_part_rr (const uint32_t index_low, const uint32_t index_high,
    return res;
 }
 
+/* Preemptive fixed priority scheduler */
+uint32_t pok_sched_part_fp (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+{
+   uint32_t i, res; 
+   uint16_t priority = THREAD_PRIORITY_MAX + 1; // a bit larger than THREAD_PRIORITY_MAX
+   
+   i = index_low; // main thread is the last choice
+   res = index_low;
+
+   do {
+      i++;
+      if (i > index_high){
+         break;
+      }
+      if (pok_threads[i].priority < priority && pok_threads[i].state == POK_STATE_RUNNABLE){
+         priority = pok_threads[i].priority;
+         res = i;
+      }
+   } while(1);
+
+   /* Can't find a thread to run */
+   if (res == index_low && pok_threads[res].state != POK_STATE_RUNNABLE)
+      res = IDLE_THREAD;
+   
+   return res;
+}
+
+/* EDF scheduler */
+uint32_t pok_sched_part_edf (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+{
+   uint32_t i, res; 
+   uint64_t earlist_deadline = ~0; // a bit larger than THREAD_PRIORITY_MAX
+   
+   i = index_low; // main thread is the last choice
+   res = index_low;
+
+   do {
+      i++;
+      if (i > index_high){
+         break;
+      }
+      if (pok_threads[i].deadline < earlist_deadline && pok_threads[i].state == POK_STATE_RUNNABLE){
+         earlist_deadline = pok_threads[i].deadline;
+         res = i;
+      }
+   } while(1);
+
+   /* Can't find a thread to run */
+   if (res == index_low && pok_threads[res].state != POK_STATE_RUNNABLE)
+      res = IDLE_THREAD;
+   
+   return res;
+}
+
+/* Preemptive fixed priority scheduler */
+uint32_t pok_sched_part_wrr (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread)
+{
+   
+}
 
 #if defined (POK_NEEDS_LOCKOBJECTS) || defined (POK_NEEDS_PORTS_QUEUEING) || defined (POK_NEEDS_PORTS_SAMPLING)
 void pok_sched_unlock_thread (const uint32_t thread_id)

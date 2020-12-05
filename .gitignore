@@ -1,0 +1,12 @@
+*.o
+*.mk
+*.lo
+*.a
+*.bin
+*.map
+*.elf
+/examples/semaphores/grub-boot-only.img
+/libpok/.depend
+/kernel/.depend
+/examples/semaphores/qemu.pid
+/examples/semaphores/sizes.c

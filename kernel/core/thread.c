@@ -50,6 +50,7 @@ extern pok_partition_t     pok_partitions[POK_CONFIG_NB_PARTITIONS];
 /**
  * This part of the code sort the threads according to their
  * periods. This part is dedicated to the RMS scheduling algorithm.
+ * Bug:change pok_thread position but the id doesn't change
  */
 void pok_thread_insert_sort(uint16_t index_low, uint16_t index_high)
 {
@@ -218,7 +219,7 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
 #ifdef POK_NEEDS_SCHED_RMS
    if ((pok_partitions[partition_id].sched == POK_SCHED_RMS) && (id > pok_partitions[partition_id].thread_index_low))
    {
-      pok_thread_insert_sort(pok_partitions[partition_id].thread_index_low+1,id);
+      pok_thread_insert_sort(pok_partitions[partition_id].thread_index_low+1,id);  // Bug here?
    }
 #endif
 

@@ -60,8 +60,8 @@ typedef struct
 	 uint8_t      priority;
 	 uint64_t     period;
 	 uint64_t     deadline;
-	 uint64_t     time_capacity;
-	 uint64_t     remaining_time_capacity;
+	 uint64_t     time_capacity; // longest time to run in each period
+	 uint64_t     remaining_time_capacity; // remaining time to run in this period 
 	 uint64_t     next_activation;
 	 pok_state_t  state;
 	 uint64_t	end_time;
