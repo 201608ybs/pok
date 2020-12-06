@@ -67,6 +67,9 @@ uint64_t          pok_partitions_remaining_slots[POK_CONFIG_SCHEDULING_NBSLOTS]
                               = (uint64_t[]) POK_CONFIG_SCHEDULING_SLOTS;
 uint8_t           pok_sched_slots_allocation[POK_CONFIG_SCHEDULING_NBSLOTS]
                               = (uint8_t[]) POK_CONFIG_SCHEDULING_SLOTS_ALLOCATION;
+/* Support for weighted round robin scheduling for partitions */
+int current_index = -1;
+uint64_t current_weight = 0;
 
 pok_sched_t       pok_global_sched;
 uint64_t          pok_sched_next_deadline;
@@ -79,6 +82,26 @@ uint8_t           pok_sched_current_slot = 0; /* Which slot are we executing at 
 uint32_t	         current_thread = KERNEL_THREAD;
 
 void pok_sched_thread_switch (void);
+
+#ifdef POK_NEEDS_SCHED_WRR
+static int gcd(uint64_t a, uint64_t b)
+{
+   uint64_t c;
+
+   if (a < b){
+      c = a;
+      a = b;
+      b = c;
+   }
+
+   while (a % b != 0){
+      c = a % b;
+      a = b;
+      b = c;
+   }
+   return b;
+}
+#endif
 
 /**
  *\\brief Init scheduling service
@@ -149,6 +172,24 @@ static uint64_t get_partition_remaining_slots(uint8_t partition_id, uint8_t *slo
    }
    return res;
 }
+
+static void get_partitions_gcd_and_max_weight(uint64_t *gcd_weight_ptr, uint64_t *max_weight_ptr)
+{
+   int i;
+   uint8_t slot_index;
+   uint64_t gcd_weight = 0, max_weight = 0, remaining_slots = 0;
+   for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i) {
+      remaining_slots = get_partition_remaining_slots(i, &slot_index);
+      if (remaining_slots > 0) {
+         gcd_weight = gcd_weight ? gcd(gcd_weight, pok_partitions[i].weight) : pok_partitions[i].weight;
+         max_weight = (pok_partitions[i].weight > max_weight) ? pok_partitions[i].weight : max_weight;
+      } 
+   }
+
+   *gcd_weight_ptr = gcd_weight;
+   *max_weight_ptr = max_weight;
+}
+
 static uint8_t pok_get_next_partition()
 {
    /* Default partition scheduler type is round robin */
@@ -157,7 +198,8 @@ static uint8_t pok_get_next_partition()
 #endif  
    uint8_t i = 0, next_partition = POK_SCHED_CURRENT_PARTITION;
    uint64_t partitions_sched_time_slice = 20; // Set default timeslice to 20 for RR scheduler
-reschedule:
+
+resched:
    switch(POK_PARTITIONS_SCHED_TYPE)
    {
       case POK_SCHED_RR:
@@ -170,7 +212,7 @@ reschedule:
 
          /* All partitions have run out of time, reset their time slots */
          if (i >= POK_CONFIG_SCHEDULING_NB_SLOTS)
-            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
 
 #ifdef POK_PARTITIONS_SCHED_TIME_SLICE
          partitions_sched_time_slice = POK_PARTITIONS_SCHED_TIME_SLICE;
@@ -185,15 +227,15 @@ reschedule:
          uint8_t slot_index;
          uint16_t priority = SCHED_PRIORITY_MAX + 1;
          for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
-            if (pok_partitions[i].priority < priority && get_partition_remaining_slots(i, &slot_index) != 0){
+            if (pok_partitions[i].priority < priority && get_partition_remaining_slots(i, &slot_index) > 0){
                priority = pok_partitions[i].priority;
                next_partition = i;
                pok_sched_current_slot = slot_index;
             }
          }
          if (priority > SCHED_PRIORITY_MAX){
-            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
-            goto reschedule;
+            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            goto resched;
          }
          pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
          pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
@@ -202,21 +244,56 @@ reschedule:
          uint8_t slot_index;
          uint64_t deadline = ~0;
          for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
-            if (pok_partitions[i].deadline < deadline && get_partition_remaining_slots(i, &slot_index) != 0){
+            if (pok_partitions[i].deadline < deadline && get_partition_remaining_slots(i, &slot_index) > 0){
                dealine = pok_partitions[i].deadline;
                next_partition = i;
                pok_sched_current_slot = slot_index;
             }
          }
          if (deadline == ~0){
-            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
-            goto reschedule;
+            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            goto resched;
          }
          pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
          pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
          break;
+#ifdef POK_NEEDS_SCHED_WRR
       case POK_SCHED_WRR:
+         uint64_t gcd_weight, max_weight;
+         uint8_t slot_index;
+
+         next_partition = -1;
+         get_partitions_gcd_and_max_weight(&gcd_weight, &max_weight);
+
+         while (true) {
+            current_index = (current_index + 1) % POK_CONFIG_NB_PARTITIONS;
+            if (current_index == 0){
+               current_weight = current_weight - gcd_weight;
+               if (current_weight <= 0){
+                  current_weight = max_weight;
+                  if (current_weight == 0)
+                     break;
+               }
+            }
+
+            if (pok_partitions[current_index].weight >= current_weight 
+                  && get_partition_remaining_slots(current_index, &slot_index) > 0){
+               next_partition = current_index;
+               pok_sched_current_slot = slot_index;
+               break;
+            }
+         }
+         /* -1 indicates all partitions have run out of time slice */
+         if (next_partition == -1){
+            current_index = -1;
+            current_weight = 0;
+            memcpy((void *)pok_partitions_remainning_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            goto resched;
+         }
+         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
+         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
          break;
+#endif
       default:
          next_partition = -1;
          printf("Bug: unknown scheduler type for partitions\n");
@@ -653,27 +730,8 @@ uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high
    
    return res;
 }
-
 #ifdef POK_NEEDS_SCHED_WRR
-static int gcd(uint64_t a, uint64_t b)
-{
-   uint64_t c;
-
-   if (a < b){
-      c = a;
-      a = b;
-      b = c;
-   }
-
-   while (a % b != 0){
-      c = a % b;
-      a = b;
-      b = c;
-   }
-   return b;
-}
-
-static uint64_t get_partition_gcd_weight(uint8_t partition_id)
+static uint64_t get_threads_gcd_weight(uint8_t partition_id)
 {
    int i;
    uint64_t gcd_weight = 0;
@@ -685,7 +743,7 @@ static uint64_t get_partition_gcd_weight(uint8_t partition_id)
    return gcd_weight;
 }
 
-static uint64_t get_partition_max_weight(uint8_t partition_id)
+static uint64_t get_threads_max_weight(uint8_t partition_id)
 {
    int i;
    uint64_t max_weight = 0;
@@ -704,8 +762,8 @@ uint32_t pok_sched_part_wrr (const uint32_t index_low, const uint32_t index_high
    uint8_t partition_id = pok_threads[index_low].partition;
    uint32_t nthreads = index_high - index_low; // ignore main thread
    uint32_t res = index_low;
-   uint64_t gcd_weight = get_partition_gcd_weight(partition_id);
-   uint64_t max_weight = get_partition_max_weight(partition_id);
+   uint64_t gcd_weight = get_threads_gcd_weight(partition_id);
+   uint64_t max_weight = get_threads_max_weight(partition_id);
    pok_partition_t partition = pok_partitions[partition_id];
 
    /*
