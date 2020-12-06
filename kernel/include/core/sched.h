@@ -48,8 +48,8 @@ void pok_sched (void);      /* Main scheduling function, this function
                              * schedules everything
                              */
 
-#define THREAD_PRIORITY_MIN 0
-#define THREAD_PRIORITY_MAX 255
+#define SCHED_PRIORITY_MIN 0
+#define SCHED_PRIORITY_MAX 255
 /* Get priority function, return are made according to a scheduler */
 uint8_t pok_sched_get_priority_min (const pok_sched_t sched_type);
 uint8_t pok_sched_get_priority_max (const pok_sched_t sched_type);

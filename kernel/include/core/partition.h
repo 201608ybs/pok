@@ -79,6 +79,7 @@ typedef struct
 
    uint8_t               priority;     /**< Priority of the partition (unused at this time */
    uint32_t              period;       /**< Period of the partition, unused at this time */
+   uint64_t              deadline;     /* Deadline of current partition */
 
    pok_sched_t           sched;       /**< The associated for the partition to schedule its threads */
 

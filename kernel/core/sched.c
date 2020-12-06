@@ -63,6 +63,8 @@ extern void pok_port_flush_partition (uint8_t);
 
 uint64_t           pok_sched_slots[POK_CONFIG_SCHEDULING_NBSLOTS]
                               = (uint64_t[]) POK_CONFIG_SCHEDULING_SLOTS;
+uint64_t          pok_partitions_remaining_slots[POK_CONFIG_SCHEDULING_NBSLOTS]
+                              = (uint64_t[]) POK_CONFIG_SCHEDULING_SLOTS;
 uint8_t           pok_sched_slots_allocation[POK_CONFIG_SCHEDULING_NBSLOTS]
                               = (uint8_t[]) POK_CONFIG_SCHEDULING_SLOTS_ALLOCATION;
 
@@ -133,6 +135,96 @@ uint8_t pok_sched_get_priority_max (const pok_sched_t sched_type)
    return 255;
 }
 
+#ifdef POK_NEEDS_PARTITIONS_SCHED
+static uint64_t get_partition_remaining_slots(uint8_t partition_id, uint8_t *slot_index)
+{
+   int i;
+   uint64_t res = 0;
+   for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
+      if (pok_sched_slots_allocation[i] == partition_id){
+         *slot_index = i; 
+         res = pok_partitions_remaining_slots[i];
+         break;
+      }
+   }
+   return res;
+}
+static uint8_t pok_get_next_partition()
+{
+   /* Default partition scheduler type is round robin */
+#ifndef POK_PARTITIONS_SCHED_TYPE
+#define POK_PARTITIONS_SCHED_TYPE POK_SCHED_RR
+#endif  
+   uint8_t i = 0, next_partition = POK_SCHED_CURRENT_PARTITION;
+   uint64_t partitions_sched_time_slice = 20; // Set default timeslice to 20 for RR scheduler
+reschedule:
+   switch(POK_PARTITIONS_SCHED_TYPE)
+   {
+      case POK_SCHED_RR:
+      /* Find the first partition whose remaining time slots is not 0 */
+         for (i = 0; i < POK_CONFIG_SCHEDULING_NB_SLOTS; ++i){
+            pok_sched_current_slot = (pok_sched_current_slot + 1) % POK_CONFIG_SCHEDULING_NBSLOTS;
+            if (pok_partitions_remaining_slots[pok_sched_current_slot] != 0)
+               break;
+         }
+
+         /* All partitions have run out of time, reset their time slots */
+         if (i >= POK_CONFIG_SCHEDULING_NB_SLOTS)
+            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+
+#ifdef POK_PARTITIONS_SCHED_TIME_SLICE
+         partitions_sched_time_slice = POK_PARTITIONS_SCHED_TIME_SLICE;
+#endif
+         partitions_shced_time_slice = (pok_partitions_remaining_slots[pok_sched_current_slot] < partitions_sched_time_slice) ? 
+                                          pok_partitions_remaining_slots[pok_sched_current_slot] : partitions_sched_time_slice;
+         pok_sched_next_deadline = pok_sched_next_deadline + partitions_sched_time_slice;
+         next_partition = pok_sched_slots_allocation[pok_sched_current_slot];
+         pok_partitions_remaining_slots[pok_sched_current_slot] -= partitions_sched_time_slice;
+         break;
+      case POK_SCHED_FP:
+         uint8_t slot_index;
+         uint16_t priority = SCHED_PRIORITY_MAX + 1;
+         for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
+            if (pok_partitions[i].priority < priority && get_partition_remaining_slots(i, &slot_index) != 0){
+               priority = pok_partitions[i].priority;
+               next_partition = i;
+               pok_sched_current_slot = slot_index;
+            }
+         }
+         if (priority > SCHED_PRIORITY_MAX){
+            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            goto reschedule;
+         }
+         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
+         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
+         break;
+      case POK_SCHED_EDF:
+         uint8_t slot_index;
+         uint64_t deadline = ~0;
+         for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
+            if (pok_partitions[i].deadline < deadline && get_partition_remaining_slots(i, &slot_index) != 0){
+               dealine = pok_partitions[i].deadline;
+               next_partition = i;
+               pok_sched_current_slot = slot_index;
+            }
+         }
+         if (deadline == ~0){
+            memcpy((void *)pok_partitions_remianing_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+            goto reschedule;
+         }
+         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
+         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
+         break;
+      case POK_SCHED_WRR:
+         break;
+      default:
+         next_partition = -1;
+         printf("Bug: unknown scheduler type for partitions\n");
+   }
+   return next_partition;
+}
+#endif
+
 #ifdef POK_NEEDS_PARTITIONS
 uint8_t	pok_elect_partition()
 {
@@ -167,6 +259,7 @@ uint8_t	pok_elect_partition()
 #    endif /* defined POK_FLUSH_PERIOD || POK_NEEDS_FLUSH_ON_WINDOWS */
 #  endif /* defined (POK_NEEDS_PORTS....) */
 
+#ifndef POK_NEEDS_PARTITIONS_SCHED
     pok_sched_current_slot = (pok_sched_current_slot + 1) % POK_CONFIG_SCHEDULING_NBSLOTS;
     pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot];
 /*
@@ -178,6 +271,9 @@ uint8_t	pok_elect_partition()
       printf ("new prev current thread = %d\n", pok_partitions[pok_sched_current_slot].prev_thread);
       */
     next_partition = pok_sched_slots_allocation[pok_sched_current_slot];
+#else
+   next_partition = pok_get_next_partition();
+#endif
 
 #ifdef POK_NEEDS_SCHED_HFPPS
    if (pok_partitions[next_partition].payback > 0) // pay back!
@@ -507,7 +603,7 @@ uint32_t pok_sched_part_fp (const uint32_t index_low, const uint32_t index_high,
                               const uint32_t prev_thread, const uint32_t current_thread)
 {
    uint32_t i, res; 
-   uint16_t priority = THREAD_PRIORITY_MAX + 1; // a bit larger than THREAD_PRIORITY_MAX
+   uint16_t priority = SCHED_PRIORITY_MAX + 1; // a bit larger than SCHED_PRIORITY_MAX
    
    i = index_low; // main thread is the last choice
    res = index_low;
@@ -535,7 +631,7 @@ uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high
                               const uint32_t prev_thread, const uint32_t current_thread)
 {
    uint32_t i, res; 
-   uint64_t earlist_deadline = ~0; // a bit larger than THREAD_PRIORITY_MAX
+   uint64_t earlist_deadline = ~0;
    
    i = index_low; // main thread is the last choice
    res = index_low;
