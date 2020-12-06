@@ -102,6 +102,10 @@ typedef struct
    uint64_t		payback; /**< Payback for HFPPS scheduling algorithm */
 #endif /* POK_NEEDS_SCHED_HFPPS */
 
+#ifdef POK_NEEDS_SCHED_WRR
+   uint64_t    current_weight;
+   int current_index;
+#endif
 #ifdef POK_NEEDS_ERROR_HANDLING
    uint32_t             thread_error;         /**< The thread identifier used for error handling */
    pok_error_status_t   error_status;        /**< A pointer used to store information about errors */

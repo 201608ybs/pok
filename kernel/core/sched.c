@@ -503,7 +503,8 @@ uint32_t pok_sched_part_rr (const uint32_t index_low, const uint32_t index_high,
 }
 
 /* Preemptive fixed priority scheduler */
-uint32_t pok_sched_part_fp (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+uint32_t pok_sched_part_fp (const uint32_t index_low, const uint32_t index_high, 
+                              const uint32_t prev_thread, const uint32_t current_thread)
 {
    uint32_t i, res; 
    uint16_t priority = THREAD_PRIORITY_MAX + 1; // a bit larger than THREAD_PRIORITY_MAX
@@ -530,7 +531,8 @@ uint32_t pok_sched_part_fp (const uint32_t ,const uint32_t,const uint32_t prev_t
 }
 
 /* EDF scheduler */
-uint32_t pok_sched_part_edf (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high, 
+                              const uint32_t prev_thread, const uint32_t current_thread)
 {
    uint32_t i, res; 
    uint64_t earlist_deadline = ~0; // a bit larger than THREAD_PRIORITY_MAX
@@ -556,11 +558,92 @@ uint32_t pok_sched_part_edf (const uint32_t ,const uint32_t,const uint32_t prev_
    return res;
 }
 
-/* Preemptive fixed priority scheduler */
-uint32_t pok_sched_part_wrr (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread)
+#ifdef POK_NEEDS_SCHED_WRR
+static int gcd(uint64_t a, uint64_t b)
 {
-   
+   uint64_t c;
+
+   if (a < b){
+      c = a;
+      a = b;
+      b = c;
+   }
+
+   while (a % b != 0){
+      c = a % b;
+      a = b;
+      b = c;
+   }
+   return b;
 }
+
+static uint64_t get_partition_gcd_weight(uint8_t partition_id)
+{
+   int i;
+   uint64_t gcd_weight = 0;
+   pok_partition_t partition = pok_partitions[partition_id];
+   for (i = partition.index_low + 1; i <= partition.high; ++i){
+      if (pok_threads[i].state == POK_STATE_RUNNABLE)
+         gcd_weight = gcd_weight ? gcd(gcd_weight, pok_threads[i].weight) : pok_threads[i].weight;
+   }
+   return gcd_weight;
+}
+
+static uint64_t get_partition_max_weight(uint8_t partition_id)
+{
+   int i;
+   uint64_t max_weight = 0;
+   pok_partition_t partition = pok_partitions[partition_id];
+   for (i = partition.index_low + 1; i <= partition.high; ++i){
+      if (pok_threads[i].state == POK_STATE_RUNNABLE && pok_threads[i].weight > max_weight)
+         max_weight = pok_threads[i].weight
+   }
+   return max_weight;
+}
+
+/* Preemptive fixed priority scheduler */
+uint32_t pok_sched_part_wrr (const uint32_t index_low, const uint32_t index_high,
+                              const uint32_t prev_thread, const uint32_t current_thread)
+{
+   uint8_t partition_id = pok_threads[index_low].partition;
+   uint32_t nthreads = index_high - index_low; // ignore main thread
+   uint32_t res = index_low;
+   uint64_t gcd_weight = get_partition_gcd_weight(partition_id);
+   uint64_t max_weight = get_partition_max_weight(partition_id);
+   pok_partition_t partition = pok_partitions[partition_id];
+
+   /*
+    * Weighted Round-Robin Scheduling(WRR) Algorithm 
+    * Refer to http://kb.linuxvirtualserver.org/wiki/Weighted_Round-Robin_Scheduling for details
+    */
+   while (true) {
+      partition.current_index = (partition.current_index + 1) % nthreads;
+      if (partition.current_index == 0){
+         partition.current_weight = partition.current_weight - gcd_weight;
+         if (partition.current_weight <= 0){
+            partition.current_weight = max_weight;
+            if (partition.current_weight == 0)
+               break;
+         }
+      }
+
+      if (pok_threads[index_low + 1 + partition.current_index].weight >= current_weight 
+            && pok_threads[index_low + 1 + partition.current_index].state == POK_STATE_RUNNABLE){
+         res = index_low + 1 + partition.current_index;
+         break;
+      }
+   }
+
+   if (res == index_low) {
+      /* No thread is runnable in partition now, reset the weight and index */
+      partition.current_weight = 0;
+      partition.current_index = -1;
+      res = (pok_threads[res].state == POK_STATE_RUNNABLE) ? res : IDLE_THREAD;
+   }
+
+   return res;
+}
+#endif
 
 #if defined (POK_NEEDS_LOCKOBJECTS) || defined (POK_NEEDS_PORTS_QUEUEING) || defined (POK_NEEDS_PORTS_SAMPLING)
 void pok_sched_unlock_thread (const uint32_t thread_id)

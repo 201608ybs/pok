@@ -186,6 +186,13 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    pok_threads[id].payback = 0;
 #endif /* POK_NEEDS_SCHED_HFPPS */
 
+#ifdef POK_NEEDS_SCHED_WRR
+   if (attr->weight > 0)
+      pok_threads[id].weight = attr->weight;
+   else
+      pok_threads[id].weight = POK_THREAD_DEFAULT_WEIGHT;
+#endif
+
    if (attr->time_capacity > 0)
    {
       pok_threads[id].time_capacity = attr->time_capacity;

@@ -98,6 +98,12 @@ void pok_partition_reinit (const uint8_t pid)
    pok_partitions[pid].thread_index = 0;
    pok_partitions[pid].current_thread = pok_partitions[pid].thread_index_low;
    pok_partitions[pid].prev_thread =  IDLE_THREAD; // breaks the rule of prev_thread not being idle, but it's just for init
+#ifdef POK_NEEDS_SCHED_WRR
+   pok_partitions[pid].gcd_weight = 0;
+   pok_partitions[pid].current_weight = 0;
+   pok_partitions[pid].max_weight = 0;
+   pok_partitions[pid].current_index = -1;
+#endif
 
 #ifdef POK_NEEDS_ERROR_HANDLING
    pok_partitions[pid].thread_error = 0;
@@ -205,6 +211,13 @@ pok_ret_t pok_partition_init ()
 #ifdef POK_NEEDS_SCHED_HFPPS
       pok_partitions[i].payback = 0;
 #endif /* POK_NEEDS_SCHED_HFPPS */
+
+#ifdef POK_NEEDS_SCHED_WRR
+      pok_partitions[i].gcd_weight = 0;
+      pok_partitions[i].current_weight = 0;
+      pok_partitions[pid].max_weight = 0;
+      pok_partitions[pid].current_index = -1;
+#endif
 
       threads_index                       = threads_index + pok_partitions[i].nthreads;
       /* Initialize the threading stuff */
