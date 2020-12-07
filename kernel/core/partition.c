@@ -72,6 +72,9 @@ void pok_partition_setup_scheduler (const uint8_t pid)
          case POK_SCHED_EDF:
             pok_partitions[pid].sched_func = &pok_sched_part_edf;
             break;
+         case POK_SCHED_GLOBAL_TIMESLICE:
+            pok_partitions[pid].sched_func = &pok_sched_part_global_timeslice;
+            break;
 #ifdef POK_NEEDS_SCHED_WRR
          case POK_SCHED_WRR:
             pok_partitions[pid].sched_func = &pok_sched_part_wrr;
@@ -312,8 +315,8 @@ pok_ret_t pok_partition_set_mode (const uint8_t pid, const pok_partition_mode_t 
 				   thread->end_time =  thread->wakeup_time + thread->time_capacity;
 			 }
 		 } else {
-			 if(thread->state == POK_STATE_DELAYED_START) { // delayed start, the delay is in the wakeup time
-			   if(!thread->wakeup_time) {
+			 if(thread->state == POK_STATE_DELAYED_START) { // delay some threads before run them
+			   if(!thread->wakeup_time) { // undelayed threads
 			     thread->state = POK_STATE_RUNNABLE;
 			     thread->wakeup_time += POK_GETTICK();
 			     if(thread->time_capacity>0)

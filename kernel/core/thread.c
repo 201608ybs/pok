@@ -108,6 +108,8 @@ void pok_thread_init(void)
 
    pok_threads[IDLE_THREAD].period                     = 0;
    pok_threads[IDLE_THREAD].deadline                   = 0;
+   pok_threads[IDLE_THREAD].absolute_deadline          = 0;
+   pok_threads[IDLE_THREAD].remaining_timeslice        = 0;
    pok_threads[IDLE_THREAD].time_capacity              = 0;
    pok_threads[IDLE_THREAD].next_activation            = 0;
    pok_threads[IDLE_THREAD].remaining_time_capacity    = 0;
@@ -124,6 +126,8 @@ void pok_thread_init(void)
    {
       pok_threads[i].period                     = 0;
       pok_threads[i].deadline                   = 0;
+      pok_threads[i].absolute_deadline          = 0;
+      pok_threads[i].remaining_timeslice        = 0;
       pok_threads[i].time_capacity              = 0;
       pok_threads[i].remaining_time_capacity    = 0;
       pok_threads[i].next_activation            = 0;
@@ -180,6 +184,7 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    if (attr->deadline > 0)
    {
       pok_threads[id].deadline      = attr->deadline;
+      pok_threads[id].absolute_deadline = POK_GETTICK() + attr->deadline;
    }
 
 #ifdef POK_NEEDS_SCHED_HFPPS
@@ -313,11 +318,13 @@ pok_ret_t pok_thread_restart (const uint32_t tid)
 pok_ret_t pok_thread_delayed_start (const uint32_t id, const uint32_t us)
 {
   uint64_t ns = 1000*((uint64_t) us);
+  // Thread belongs to currently running partition
   if (POK_CURRENT_PARTITION.thread_index_low > id || POK_CURRENT_PARTITION.thread_index_high < id)
     return POK_ERRNO_THREADATTR;
   pok_threads[id].priority = pok_threads[id].base_priority;
   //reset stack
   pok_context_reset(POK_USER_STACK_SIZE,pok_threads[id].init_stack_addr);
+  // For thread whose period is -1, it doesn't has the POK_STATE_WAIT_NEXT_ACTIVATION state
   if ((long long)pok_threads[id].period == -1) //-1 <==> ARINC INFINITE_TIME_VALUE
     {
       if (pok_partitions[pok_threads[id].partition].mode == POK_PARTITION_MODE_NORMAL)
@@ -346,7 +353,7 @@ pok_ret_t pok_thread_delayed_start (const uint32_t id, const uint32_t us)
       if (pok_partitions[pok_threads[id].partition].mode == POK_PARTITION_MODE_NORMAL)
 	    { // set the first release point
 	      pok_threads[id].next_activation = ns + POK_GETTICK();
-	      pok_threads[id].end_time = pok_threads[id].deadline + pok_threads[id].next_activation;
+	      pok_threads[id].end_time = pok_threads[id].deadline + pok_threads[id].next_activation; // May be useful
 	    }
       else
 	   {

@@ -393,12 +393,15 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
        thread->state = POK_STATE_RUNNABLE;
      }
 #endif
+      if (now >= thread->absolute_deadline)
+         printf("Thread%d missed deadline\n", new_partition->thread_index_low + i); // deadline miss
 
      if ((thread->state == POK_STATE_WAIT_NEXT_ACTIVATION) && (thread->next_activation <= now))
      {
        thread->state = POK_STATE_RUNNABLE;
        thread->remaining_time_capacity =  thread->time_capacity;
-       thread->next_activation = thread->next_activation + thread->period; 
+       thread->next_activation = thread->next_activation + thread->period;
+       thread->absolute_deadline = thread->deadline + now; // reset the absolute deadline
      }
    }
 
@@ -443,7 +446,9 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
          {
             if (POK_CURRENT_THREAD.remaining_time_capacity > 0)
             {
-               POK_CURRENT_THREAD.remaining_time_capacity = POK_CURRENT_THREAD.remaining_time_capacity - 1;
+               POK_CURRENT_THREAD.remaining_time_capacity -= POK_CURRENT_THREAD.remaining_time_capacity;
+               if (((pok_sched_t[])POK_CONFIG_PARTITIONS_SCHEDULER)[POK_CURRENT_THREAD.partition] == POK_SCHED_GLOBAL_TIMESLICE)
+                  POK_CURRENT_THREAD.remaining_slice -= 1;
             }
             else if(POK_CURRENT_THREAD.time_capacity > 0) // Wait next activation only for thread 
                                                           // with non-infinite capacity (could be 
@@ -675,9 +680,51 @@ uint32_t pok_sched_part_rr (const uint32_t index_low, const uint32_t index_high,
    return res;
 }
 
+uint32_t pok_sched_part_global_timeslice (const uint32_t index_low, const uint32_t index_high, 
+                                          const uint32_t prev_thread, const uint32_t current_thread)
+{
+   uint32_t res;
+   uint32_t from;
+
+   if (current_thread == IDLE_THREAD)
+   {
+      res = prev_thread;
+   }
+   else
+   {
+      res = current_thread;
+   }
+
+   from = res;
+
+   if ((pok_threads[current_thread].remaining_time_capacity > 0) && (pok_threads[current_thread].remaining_timeslice > 0) 
+         && (pok_threads[current_thread].state == POK_STATE_RUNNABLE))
+      return current_thread;
+   
+   do
+   {
+      res++;
+      if (res > index_high)
+      {
+         res = index_low;
+      }
+   }
+   while ((res != from) && (pok_threads[res].state != POK_STATE_RUNNABLE));
+
+   if (res != from)
+      pok_threads[res].remaining_timeslice = POK_THREAD_SCHED_TIME_SLICE;
+
+   if ((res == from) && (pok_threads[res].state != POK_STATE_RUNNABLE))
+   {
+      res = IDLE_THREAD;
+   }
+   return res;
+}
+
 /* Preemptive fixed priority scheduler */
 uint32_t pok_sched_part_fp (const uint32_t index_low, const uint32_t index_high, 
-                              const uint32_t prev_thread, const uint32_t current_thread)
+                              const uint32_t __attribute__((unused)) prev_thread, 
+                              const uint32_t __attribute__((unused)) current_thread)
 {
    uint32_t i, res; 
    uint16_t priority = SCHED_PRIORITY_MAX + 1; // a bit larger than SCHED_PRIORITY_MAX
@@ -705,7 +752,8 @@ uint32_t pok_sched_part_fp (const uint32_t index_low, const uint32_t index_high,
 
 /* EDF scheduler */
 uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high, 
-                              const uint32_t prev_thread, const uint32_t current_thread)
+                              const uint32_t __attribute__((unused)) prev_thread, 
+                              const uint32_t __attribute__((unused)) current_thread)
 {
    uint32_t i, res; 
    uint64_t earlist_deadline = ~0;
@@ -718,8 +766,8 @@ uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high
       if (i > index_high){
          break;
       }
-      if (pok_threads[i].deadline < earlist_deadline && pok_threads[i].state == POK_STATE_RUNNABLE){
-         earlist_deadline = pok_threads[i].deadline;
+      if (pok_threads[i].absolute_deadline < earlist_deadline && pok_threads[i].state == POK_STATE_RUNNABLE){
+         earlist_deadline = pok_threads[i].absolute_deadline;
          res = i;
       }
    } while(1);
@@ -730,6 +778,7 @@ uint32_t pok_sched_part_edf (const uint32_t index_low, const uint32_t index_high
    
    return res;
 }
+
 #ifdef POK_NEEDS_SCHED_WRR
 static uint64_t get_threads_gcd_weight(uint8_t partition_id)
 {
@@ -757,7 +806,8 @@ static uint64_t get_threads_max_weight(uint8_t partition_id)
 
 /* Preemptive fixed priority scheduler */
 uint32_t pok_sched_part_wrr (const uint32_t index_low, const uint32_t index_high,
-                              const uint32_t prev_thread, const uint32_t current_thread)
+                              const uint32_t __attribute__((unused)) prev_thread, 
+                              const uint32_t __attribute__((unused)) current_thread)
 {
    uint8_t partition_id = pok_threads[index_low].partition;
    uint32_t nthreads = index_high - index_low; // ignore main thread

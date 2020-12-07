@@ -34,6 +34,7 @@
 #define KERNEL_THREAD		POK_CONFIG_NB_THREADS -2
 #define IDLE_THREAD        POK_CONFIG_NB_THREADS -1
 
+#define POK_THREAD_SCHED_TIME_SLICE 2
 #define POK_THREAD_DEFAULT_TIME_CAPACITY 10
 /* Set default weight to 1 because we thinks it is not important if user doesn't set the weight */
 #define POK_THREAD_DEFAULT_WEIGHT 1
@@ -61,7 +62,9 @@ typedef struct
 {
 	 uint8_t      priority;
 	 uint64_t     period;
-	 uint64_t     deadline;
+	 uint64_t     deadline; // relative deadline
+	 uint64_t     absolute_deadline; // absolute deadline
+	 uint8_t	  remaining_timeslice; // used for RR scheduler
 	 uint64_t     time_capacity; // longest time to run in each period
 	 uint64_t     remaining_time_capacity; // remaining time to run in this period 
 	 uint64_t     next_activation;
