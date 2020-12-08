@@ -208,6 +208,17 @@ pok_ret_t pok_partition_init ()
       }
 #endif
 
+#ifdef POK_NEEDS_PARTITIONS_SCHED
+      /* Read properties assigned to each partition through #define accordingly */
+      pok_partitions[i].priority = ((uint8_t[])POK_CONFIG_PARTITIONS_PRIORITY)[i];
+      pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i];
+      pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i];
+      pok_partitions[i].next_activation = pok_partitions[i].pertiod + POK_GETTICK();
+      pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
+      pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
+      pok_partitions[i].remaining_time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
+      pok_partitions[i].weight = ((uint64_t[])POK_CONFIG_PARTITIONS_WEIGHT)[i];
+#endif
 #ifdef POK_CONFIG_PARTITIONS_SCHEDULER
       pok_partitions[i].sched             = ((pok_sched_t[]) POK_CONFIG_PARTITIONS_SCHEDULER) [i];
 #endif

@@ -189,7 +189,20 @@ static void get_partitions_gcd_and_max_weight(uint64_t *gcd_weight_ptr, uint64_t
    *gcd_weight_ptr = gcd_weight;
    *max_weight_ptr = max_weight;
 }
-
+static uint8_t pok_random_select_partition()
+{
+   int i;
+   uint8_t start_partition = POK_GETICK() % POK_CONFIG_NB_PARTITIONS;
+   for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
+      start_partition = (start_partition + i) % POK_CONFIG_NB_PARTITIONS;
+      if (pok_partitions[start_partition].mode != POK_PARTITION_MODE_STOPPED){
+         pok_sched_current_slot = start_partition;
+         pok_sched_next_deadline += 1;
+         break;
+      }
+   }
+   return start_partition;
+}
 static uint8_t pok_get_next_partition()
 {
    /* Default partition scheduler type is round robin */
@@ -198,69 +211,69 @@ static uint8_t pok_get_next_partition()
 #endif  
    uint8_t i = 0, next_partition = POK_SCHED_CURRENT_PARTITION;
    uint64_t partitions_sched_time_slice = 20; // Set default timeslice to 20 for RR scheduler
-
+   
 resched:
    switch(POK_PARTITIONS_SCHED_TYPE)
    {
       case POK_SCHED_RR:
       /* Find the first partition whose remaining time slots is not 0 */
-         for (i = 0; i < POK_CONFIG_SCHEDULING_NB_SLOTS; ++i){
-            pok_sched_current_slot = (pok_sched_current_slot + 1) % POK_CONFIG_SCHEDULING_NBSLOTS;
-            if (pok_partitions_remaining_slots[pok_sched_current_slot] != 0)
+         for (i = 0; i < POK_CONFIG_NB_PARTITION; ++i){
+            pok_sched_current_slot = (pok_sched_current_slot + 1) % POK_CONFIG_NB_PARTITIONS;
+            if (pok_partitions[pok_sched_current_slot].remaining_time_slice != 0
+                  && pok_partitions[pok_sched_current_slot].mode != POK_PARTITION_MODE_STOPPED)
                break;
          }
 
          /* All partitions have run out of time, reset their time slots */
-         if (i >= POK_CONFIG_SCHEDULING_NB_SLOTS)
-            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
+         // TODO: handle this situation
+         if (i >= POK_CONFIG_NB_PARTITIONS)
+            return pok_random_select_partition();;
 
 #ifdef POK_PARTITIONS_SCHED_TIME_SLICE
          partitions_sched_time_slice = POK_PARTITIONS_SCHED_TIME_SLICE;
 #endif
-         partitions_shced_time_slice = (pok_partitions_remaining_slots[pok_sched_current_slot] < partitions_sched_time_slice) ? 
-                                          pok_partitions_remaining_slots[pok_sched_current_slot] : partitions_sched_time_slice;
+         partitions_sched_time_slice = (pok_partitions[pok_sched_current_slot].remaining_time_slot < partitions_sched_time_slice) ? 
+                                          pok_partitions[pok_sched_current_slot].remaining_time_slot : partitions_sched_time_slice;
          pok_sched_next_deadline = pok_sched_next_deadline + partitions_sched_time_slice;
-         next_partition = pok_sched_slots_allocation[pok_sched_current_slot];
-         pok_partitions_remaining_slots[pok_sched_current_slot] -= partitions_sched_time_slice;
+         next_partition = pok_sched_current_slot;
+         pok_partitions[pok_sched_current_slot].remaining_time_slot -= partitions_sched_time_slice;
          break;
       case POK_SCHED_FP:
-         uint8_t slot_index;
          uint16_t priority = SCHED_PRIORITY_MAX + 1;
          for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
-            if (pok_partitions[i].priority < priority && get_partition_remaining_slots(i, &slot_index) > 0){
+            if (pok_partitions[i].priority < priority && pok_partitions[i].remaining_time_slot > 0
+                  && pok_partitions[i].mode != POK_PARTITION_MODE_STOPPED){
                priority = pok_partitions[i].priority;
                next_partition = i;
-               pok_sched_current_slot = slot_index;
+               pok_sched_current_slot = i;
             }
          }
-         if (priority > SCHED_PRIORITY_MAX){
-            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
-            goto resched;
-         }
-         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
-         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
+         // randomly select a partition to run 
+         if (priority > SCHED_PRIORITY_MAX)
+            return pok_random_select_partition();
+
+         pok_sched_next_deadline = pok_sched_next_deadline + pok_partitions[pok_sched_current_slot].time_slot; // set deadline
+         pok_partitions[pok_sched_current_slot].remaining_time_slot = 0;
          break;
       case POK_SCHED_EDF:
-         uint8_t slot_index;
          uint64_t deadline = ~0;
          for (i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
-            if (pok_partitions[i].deadline < deadline && get_partition_remaining_slots(i, &slot_index) > 0){
-               dealine = pok_partitions[i].deadline;
+            if (pok_partitions[i].absolute_deadline < deadline && pok_partitions[i].remaining_time_slot > 0
+                  && pok_partitions[i].mode != POK_PARTITION_MODE_STOPPED){
+               dealine = pok_partitions[i].absolute_deadline;
                next_partition = i;
-               pok_sched_current_slot = slot_index;
+               pok_sched_current_slot = i;
             }
          }
-         if (deadline == ~0){
-            memcpy((void *)pok_partitions_remaining_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
-            goto resched;
-         }
-         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
-         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
+         if (deadline == ~0)
+            return pok_random_select_partition();
+   
+         pok_partitions[pok_sched_current_slot].remaining_time_slot = 0; // set remaining time slots
+         pok_sched_next_deadline = pok_sched_next_deadline +  pok_partitions[pok_sched_current_slot].time_slot; // set deadline
          break;
 #ifdef POK_NEEDS_SCHED_WRR
       case POK_SCHED_WRR:
          uint64_t gcd_weight, max_weight;
-         uint8_t slot_index;
 
          next_partition = -1;
          get_partitions_gcd_and_max_weight(&gcd_weight, &max_weight);
@@ -276,22 +289,21 @@ resched:
                }
             }
 
-            if (pok_partitions[current_index].weight >= current_weight 
-                  && get_partition_remaining_slots(current_index, &slot_index) > 0){
+            if (pok_partitions[current_index].weight >= current_weight && pok_partitions[current_index].remaining_time_slot > 0
+                  && pok_partitions[current_index].mode != POK_PARTITION_MODE_STOPPED){
                next_partition = current_index;
-               pok_sched_current_slot = slot_index;
+               pok_sched_current_slot = current_index;
                break;
             }
          }
-         /* -1 indicates all partitions have run out of time slice */
+         // return -1 to indicate there is no partitions eligible to run
          if (next_partition == -1){
             current_index = -1;
             current_weight = 0;
-            memcpy((void *)pok_partitions_remainning_slots, (void *)pok_sched_slots, sizeof(uint64_t) * POK_CONFIG_SCHEDULING_NBSLOTS);
-            goto resched;
+            return pok_random_select_partition();
          }
-         pok_partitions_remaining_slots[pok_sched_current_slot] = 0; // set remaining time slots
-         pok_sched_next_deadline = pok_sched_next_deadline + pok_sched_slots[pok_sched_current_slot]; // set deadline
+         pok_partitions[pok_sched_current_slot].remaining_time_slot = 0; // set remaining time slots
+         pok_sched_next_deadline = pok_sched_next_deadline +  pok_partitions[pok_sched_current_slot].time_slot; // set deadline
          break;
 #endif
       default:
@@ -308,6 +320,17 @@ uint8_t	pok_elect_partition()
   uint8_t next_partition = POK_SCHED_CURRENT_PARTITION;
 # if POK_CONFIG_NB_PARTITIONS > 1
   uint64_t now = POK_GETTICK();
+  int i;
+
+  for(i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
+      if(pok_partitions[i].absolute_deadline < now)
+         printf("Partition%d missed deadline\n", i);
+      if(pok_parititions[i].next_activation <= now && pok_partitions[i].mode != POK_PARTITION_MODE_STOPPED){
+         pok_partitions[i].remaining_time_slot = pok_partitions[i].time_slot;
+         pok_partitions[i].next_activation += pok_partitions[i].period;
+         pok_partitions[i].absolute_deadline = now + pok_partitions[i].deadline;
+      }
+  }
 
   if (pok_sched_next_deadline <= now)
   {
@@ -518,12 +541,19 @@ void pok_sched()
   }
 
    pok_current_partition = elected_partition;
+#ifdef POK_NEEDS_PARTITIONS_SCHED
+   if (elected_partition < 0){
+      goto out;
+      elected_thread = IDLE_THREAD;
+   }
+#endif 
    if(pok_partitions[pok_current_partition].current_thread != elected_thread) {
 	   if(pok_partitions[pok_current_partition].current_thread != IDLE_THREAD) {
 		   pok_partitions[pok_current_partition].prev_thread = pok_partitions[pok_current_partition].current_thread;
 	   }
 	   pok_partitions[pok_current_partition].current_thread = elected_thread;
    }
+out:
   pok_sched_context_switch(elected_thread);
 }
 #else
