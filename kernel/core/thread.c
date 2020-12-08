@@ -122,12 +122,12 @@ void pok_thread_init(void)
                                                    (IDLE_THREAD,								             IDLE_STACK_SIZE,
 						   (uint32_t)pok_arch_idle);
 
-   for (i = 0; i < POK_CONFIG_NB_THREADS; ++i)
+   for (i = 0; i < POK_CONFIG_NB_THREADS - 2; ++i)
    {
       pok_threads[i].period                     = 0;
       pok_threads[i].deadline                   = 0;
       pok_threads[i].absolute_deadline          = 0;
-      pok_threads[i].remaining_timeslice        = 0;
+      pok_threads[i].remaining_timeslice        = POK_THREAD_SCHED_TIME_SLICE;
       pok_threads[i].time_capacity              = 0;
       pok_threads[i].remaining_time_capacity    = 0;
       pok_threads[i].next_activation            = 0;

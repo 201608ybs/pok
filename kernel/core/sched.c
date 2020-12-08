@@ -467,11 +467,14 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
 #endif
             )
          {
+            printf("Current remaining_time_capacity is %d,\n", POK_CURRENT_THREAD.remaining_time_capacity);
+            printf("Current remaining_timeslice is %d,\n", POK_CURRENT_THREAD.remaining_timeslice);
             if (POK_CURRENT_THREAD.remaining_time_capacity > 0)
             {
-               POK_CURRENT_THREAD.remaining_time_capacity -= POK_CURRENT_THREAD.remaining_time_capacity;
-               if (pok_partitions[POK_CURRENT_THREAD.partition].sched == POK_SCHED_GLOBAL_TIMESLICE)
-                  POK_CURRENT_THREAD.remaining_timeslice -= 1;
+               POK_CURRENT_THREAD.remaining_time_capacity -= 10000;
+               if (pok_partitions[POK_CURRENT_THREAD.partition].sched == POK_SCHED_GLOBAL_TIMESLICE){
+                  POK_CURRENT_THREAD.remaining_timeslice -= 10000;
+               }
             }
             else if(POK_CURRENT_THREAD.time_capacity > 0) // Wait next activation only for thread 
                                                           // with non-infinite capacity (could be 
@@ -721,8 +724,9 @@ uint32_t pok_sched_part_global_timeslice (const uint32_t index_low, const uint32
    from = res;
 
    if ((pok_threads[current_thread].remaining_time_capacity > 0) && (pok_threads[current_thread].remaining_timeslice > 0) 
-         && (pok_threads[current_thread].state == POK_STATE_RUNNABLE))
-      return current_thread;
+         && (pok_threads[current_thread].state == POK_STATE_RUNNABLE)){
+            return current_thread;
+         }
    
    do
    {
@@ -732,12 +736,15 @@ uint32_t pok_sched_part_global_timeslice (const uint32_t index_low, const uint32
          res = index_low;
       }
    }
-   while ((res != from) && (pok_threads[res].state != POK_STATE_RUNNABLE));
+   while ((res != from) && (pok_threads[res].state != POK_STATE_RUNNABLE) 
+            && (pok_threads[res].remaining_time_capacity <= 0));
 
-   if (res != from)
-      pok_threads[res].remaining_timeslice = POK_THREAD_SCHED_TIME_SLICE;
+   if (res != from){
+      pok_threads[res].remaining_timeslice = (pok_threads[res].remaining_time_capacity > POK_THREAD_SCHED_TIME_SLICE) ?
+                                                POK_THREAD_SCHED_TIME_SLICE : pok_threads[res].remaining_time_capacity;
+   }
 
-   if ((res == from) && (pok_threads[res].state != POK_STATE_RUNNABLE))
+   if ((res == from) && (pok_threads[res].state != POK_STATE_RUNNABLE || pok_threads[res].remaining_time_capacity <= 0))
    {
       res = IDLE_THREAD;
    }
