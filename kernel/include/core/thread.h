@@ -75,7 +75,7 @@ typedef struct
 	 uint64_t	payback; /**< Payback for HFPPS scheduling algorithm */
 #endif /* POK_NEEDS_SCHED_HFPPS */
 #ifdef POK_NEEDS_SCHED_WRR
-	int	weight;
+	uint64_t	weight;
 #endif
 	 void			 *entry;
 	 uint8_t		 partition;
@@ -96,7 +96,7 @@ typedef struct
 	 uint32_t     stack_size;
 	 pok_state_t  state;
 #ifdef POK_NEEDS_SCHED_WRR
-	int	weight	/* weight of the thread */
+	uint64_t	  weight;	/* weight of the thread */
 #endif
 } pok_thread_attr_t;
 /*

@@ -213,7 +213,7 @@ pok_ret_t pok_partition_init ()
       pok_partitions[i].priority = ((uint8_t[])POK_CONFIG_PARTITIONS_PRIORITY)[i];
       pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i];
       pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i];
-      pok_partitions[i].next_activation = pok_partitions[i].pertiod + POK_GETTICK();
+      pok_partitions[i].next_activation = pok_partitions[i].period + POK_GETTICK();
       pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
       pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
       pok_partitions[i].remaining_time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
@@ -237,7 +237,7 @@ pok_ret_t pok_partition_init ()
 
 #ifdef POK_NEEDS_SCHED_WRR
       pok_partitions[i].current_weight = 0;
-      pok_partitions[pid].current_index = -1;
+      pok_partitions[i].current_index = -1;
 #endif
 
       threads_index                       = threads_index + pok_partitions[i].nthreads;
