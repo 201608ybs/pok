@@ -209,9 +209,10 @@ pok_ret_t pok_partition_init ()
       /* Read properties assigned to each partition through #define accordingly */
       pok_partitions[i].priority = ((uint8_t[])POK_CONFIG_PARTITIONS_PRIORITY)[i];
       pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i] * pok_quantum_incr;;
-      pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i] * pok_quantum_incr;;
-      pok_partitions[i].next_activation = pok_partitions[i].period + POK_GETTICK();
+      pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i] * pok_quantum_incr;
+      pok_partitions[i].next_activation = pok_partitions[i].period * pok_quantum_incr + POK_GETTICK();
       pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
+      printf("pok_partitions[%d].absolute_deadline is: %d\n", i, pok_partitions[i].absolute_deadline);
       pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
       pok_partitions[i].remaining_time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
       pok_partitions[i].weight = ((uint64_t[])POK_CONFIG_PARTITIONS_WEIGHT)[i];
@@ -308,7 +309,6 @@ pok_ret_t pok_partition_set_mode (const uint8_t pid, const pok_partition_mode_t 
 	 for (i = 0; i < pok_partitions[pid].nthreads; i++)
 	 {
 		 thread = &(pok_threads[POK_CURRENT_PARTITION.thread_index_low + i]);
-       thread->absolute_deadline = thread->deadline * pok_quantum_incr + POK_GETTICK();
 		 if ((long long)thread->period == -1) {//-1 <==> ARINC INFINITE_TIME_VALUE
 			 if(thread->state == POK_STATE_DELAYED_START) { // delayed start, the delay is in the wakeup time
 				 if(!thread->wakeup_time) {

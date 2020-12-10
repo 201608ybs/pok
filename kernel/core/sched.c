@@ -313,8 +313,14 @@ uint8_t	pok_elect_partition()
   int i;
 
   for(i = 0; i < POK_CONFIG_NB_PARTITIONS; ++i){
-      if(pok_partitions[i].absolute_deadline < now)
-         printf("Partition%d missed deadline\n", i);
+      // printf("now is %d\n", now);
+      // printf("pok_partitions[%d].absolute_deadline is %u\n", i, pok_partitions[i].absolute_deadline);
+      // printf("pok_partitions[%d].next_activation is %u\n", i, pok_partitions[i].next_activation);
+
+      if(pok_partitions[i].absolute_deadline < now && pok_partitions[i].remaining_time_slot > 0){
+         printf("partition %d missed deadline\n", i);
+         printf("now is %u while absolute_deadline is %u\n", now, pok_partitions[i].absolute_deadline);
+      }
       if(pok_partitions[i].next_activation <= now && pok_partitions[i].mode != POK_PARTITION_MODE_STOPPED){
          printf("Partition%d is activated\n", i);
          pok_partitions[i].remaining_time_slot = pok_partitions[i].time_slot;
@@ -322,7 +328,7 @@ uint8_t	pok_elect_partition()
          pok_partitions[i].absolute_deadline = now + pok_partitions[i].deadline;
       }
   }
-  printf("Current clock: %d\n", now);
+//   printf("Current clock: %d\n", now);
   if (pok_sched_next_deadline <= now)
   {
       /* Here, we change the partition */
@@ -476,6 +482,7 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
                POK_CURRENT_THREAD.state = POK_STATE_WAIT_NEXT_ACTIVATION;
             }
          }
+         printf("here\n");
          elected = new_partition->sched_func (new_partition->thread_index_low,
                                                      new_partition->thread_index_high,
 						     new_partition->prev_thread,
@@ -716,6 +723,8 @@ uint32_t pok_sched_part_global_timeslice (const uint32_t index_low, const uint32
 
    from = res;
 
+   printf("from is %d\n", from);
+
    if ((pok_threads[current_thread].remaining_time_capacity > 0) && (pok_threads[current_thread].remaining_timeslice > 0) 
          && (pok_threads[current_thread].state == POK_STATE_RUNNABLE)){
             return current_thread;
@@ -741,6 +750,7 @@ uint32_t pok_sched_part_global_timeslice (const uint32_t index_low, const uint32
    {
       res = IDLE_THREAD;
    }
+   printf("res4 is: %d\n", res);
    return res;
 }
 

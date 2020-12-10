@@ -111,7 +111,7 @@ pok_ret_t pok_lockobj_create (pok_lockobj_t* obj, const pok_lockobj_attr_t* attr
    }
    else
    {
-      obj->current_value = 0;
+      obj->current_value = 1;
    }
 
    return POK_ERRNO_OK;
@@ -325,7 +325,6 @@ pok_ret_t pok_lockobj_lock (pok_lockobj_t* obj, const pok_lockobj_lockattr_t* at
          {
             pok_sched_lock_current_thread ();
          }
-         
          SPIN_UNLOCK (obj->spin);
          pok_sched();     /* reschedule baby, reschedule !! */
          SPIN_LOCK (obj->spin);

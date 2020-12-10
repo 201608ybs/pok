@@ -28,6 +28,7 @@ void* pinger_job ()
    pok_ret_t ret;
    while (1)
    {
+      printf("here1\n");
       ret = pok_mutex_lock (mid);
       printf("mutex lock, ret=%d\n", ret);
       val = 10;
@@ -45,6 +46,7 @@ void* pinger_job2 ()
    pok_ret_t ret;
    while (1)
    {
+      printf("here2\n");
       ret = pok_mutex_lock (mid);
       printf("mutex lock, ret=%d\n", ret);
       printf ("Hello, I'm task two in partition one, value before change=%d\n", val);

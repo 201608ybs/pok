@@ -9,8 +9,8 @@
 
 /* the macros added for partitions scheduling */
 #define POK_NEEDS_PARTITIONS_SCHED 1
-#define POK_PARTITIONS_SCHED_TYPE POK_SCHED_WRR
-#define POK_PARTITIONS_SCHED_TIME_SLICE 10
+#define POK_PARTITIONS_SCHED_TYPE POK_SCHED_RR
+#define POK_PARTITIONS_SCHED_TIME_SLICE 4
 
 #define POK_CONFIG_PARTITIONS_SCHEDULER                          \
     {                                                            \

@@ -10,3 +10,6 @@
 /kernel/.depend
 /examples/semaphores/qemu.pid
 /examples/semaphores/sizes.c
+*.log
+*.pid
+sizes.c

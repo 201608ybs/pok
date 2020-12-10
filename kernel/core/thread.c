@@ -183,7 +183,8 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
 
    if (attr->deadline > 0)
    {
-      pok_threads[id].deadline      = attr->deadline * pok_quantum_incr;
+      pok_threads[id].deadline = attr->deadline * pok_quantum_incr;
+      pok_threads[id].absolute_deadline = pok_threads[id].deadline + POK_GETTICK();
    }
 
 #ifdef POK_NEEDS_SCHED_HFPPS
