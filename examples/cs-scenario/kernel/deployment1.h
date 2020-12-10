@@ -10,6 +10,7 @@
 #define POK_NEEDS_THREAD_SUSPEND 1
 #define POK_NEEDS_THREAD_SLEEP 1
 #define POK_NEEDS_GETTICK 1
+#define POK_CONFIG_NEEDS_FUNC_GETCHAR 1
 
 /* the macros added for partitions scheduling */
 #define POK_NEEDS_PARTITIONS_SCHED 1
@@ -20,16 +21,11 @@
     {                                             \
         POK_SCHED_GLOBAL_TIMESLICE, POK_SCHED_EDF \
     }
-#define POK_CONFIG_PARTITIONS_NTHREADS \
-    {                                  \
-        5, 5                           \
-    }
 
 #define POK_NEEDS_TIME 1
 #define POK_NEEDS_DEBUG 1
 #define POK_NEEDS_CONSOLE 1
 
-#define POK_CONFIG_NB_THREADS 12
 #define POK_CONFIG_NB_PARTITIONS 2
 
 #define POK_CONFIG_PARTITIONS_SIZE {120 * 1024, 120 * 1024};

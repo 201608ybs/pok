@@ -14,7 +14,7 @@ int main()
   uint32_t tid;
   pok_ret_t ret;
   pok_thread_attr_t tattr;
-  int i;
+  int i, a;
 
   for (i = 0; i < 256; ++i){
     orders[i] = 0;
@@ -58,6 +58,16 @@ int main()
   tattr.period = 200;
   tattr.weight = 2;
   tattr.entry = consume_job;
+
+  ret = pok_thread_create(&tid, &tattr);
+  printf("[P1] create consume_job returns %d\n", ret);
+
+  tattr.priority = 42;
+  tattr.time_capacity = 5;
+  tattr.deadline = 200;
+  tattr.period = 200;
+  tattr.weight = 2;
+  tattr.entry = random_generator;
 
   ret = pok_thread_create(&tid, &tattr);
   printf("[P1] create consume_job returns %d\n", ret);

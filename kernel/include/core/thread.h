@@ -30,9 +30,10 @@
  * thread is used to execute kernel code while the idle thread
  * is used to save processor resources.
  */
-
-#define KERNEL_THREAD		POK_CONFIG_NB_THREADS -2
-#define IDLE_THREAD        POK_CONFIG_NB_THREADS -1
+#define THREADS_PER_PARTITION 16
+#define POK_CONFIG_NB_THREADS THREADS_PER_PARTITION * POK_CONFIG_NB_PARTITIONS + 2
+#define KERNEL_THREAD		POK_CONFIG_NB_THREADS - 2
+#define IDLE_THREAD        POK_CONFIG_NB_THREADS - 1
 
 #define POK_THREAD_SCHED_TIME_SLICE 2
 #define POK_THREAD_DEFAULT_TIME_CAPACITY 10

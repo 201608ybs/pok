@@ -482,7 +482,6 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
                POK_CURRENT_THREAD.state = POK_STATE_WAIT_NEXT_ACTIVATION;
             }
          }
-         printf("here\n");
          elected = new_partition->sched_func (new_partition->thread_index_low,
                                                      new_partition->thread_index_high,
 						     new_partition->prev_thread,

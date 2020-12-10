@@ -20,6 +20,7 @@
 
 #include <types.h>
 #include <arch.h>
+#include <core/thread.h>
 
 #ifndef POK_CONFIG_NB_LOCKOBJECTS
 #define POK_CONFIG_NB_LOCKOBJECTS 0

@@ -13,3 +13,4 @@
 *.log
 *.pid
 sizes.c
+.vscode/*

@@ -77,30 +77,6 @@ void pok_thread_init(void)
 {
    uint32_t i;
 
-#ifdef POK_NEEDS_PARTITIONS
-   uint32_t total_threads;
-   uint8_t  j;
-
-   total_threads = 0;
-
-   for (j = 0 ; j < POK_CONFIG_NB_PARTITIONS ; j++)
-   {
-      total_threads = total_threads + pok_partitions[j].nthreads;
-   }
-
-#if defined (POK_NEEDS_DEBUG) || defined (POK_NEEDS_ERROR_HANDLING)
-   if (total_threads != (POK_CONFIG_NB_THREADS - 2))
-   {
-#ifdef POK_NEEDS_DEBUG
-      printf ("Error in configuration, bad number of threads\n");
-#endif
-#ifdef POK_NEEDS_ERROR_HANDLING
-      pok_kernel_error (POK_ERROR_KIND_KERNEL_CONFIG);
-#endif
-   }
-#endif
-#endif
-
    pok_threads[KERNEL_THREAD].priority	   = pok_sched_get_priority_min(0);
    pok_threads[KERNEL_THREAD].base_priority	   = pok_sched_get_priority_min(0);
    pok_threads[KERNEL_THREAD].state		   = POK_STATE_RUNNABLE;
@@ -152,11 +128,11 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    /**
     * We can create a thread only if the partition is in INIT mode
     */
-   if (  (pok_partitions[partition_id].mode != POK_PARTITION_MODE_INIT_COLD) &&
-         (pok_partitions[partition_id].mode != POK_PARTITION_MODE_INIT_WARM) )
-   {
-      return POK_ERRNO_MODE;
-   }
+   // if (  (pok_partitions[partition_id].mode != POK_PARTITION_MODE_INIT_COLD) &&
+   //       (pok_partitions[partition_id].mode != POK_PARTITION_MODE_INIT_WARM) )
+   // {
+   //    return POK_ERRNO_MODE;
+   // }
 
    if (pok_partitions[partition_id].thread_index >= pok_partitions[partition_id].thread_index_high)
    {
@@ -225,6 +201,7 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    pok_threads[id].entry            = attr->entry;
    pok_threads[id].init_stack_addr  = stack_vaddr;
    *thread_id = id;
+   pok_partitions[partition_id].nthreads += 1;
 
 #ifdef POK_NEEDS_SCHED_RMS
    if ((pok_partitions[partition_id].sched == POK_SCHED_RMS) && (id > pok_partitions[partition_id].thread_index_low))

@@ -195,8 +195,10 @@ pok_ret_t pok_partition_init ()
       pok_partitions[i].base_vaddr = base_vaddr;
       /* Set the memory space and so on */
       
-      pok_partitions[i].thread_index_low  = threads_index;
-      pok_partitions[i].nthreads          = ((uint32_t[]) POK_CONFIG_PARTITIONS_NTHREADS) [i];
+      pok_partitions[i].thread_index_low  = i * THREADS_PER_PARTITION;
+      pok_partitions[i].thread_index_high = (i + 1) * THREADS_PER_PARTITION;
+      pok_partitions[i].nthreads = 0;
+      // pok_partitions[i].nthreads          = ((uint32_t[]) POK_CONFIG_PARTITIONS_NTHREADS) [i];
 
 #ifdef POK_NEEDS_ERROR_HANDLING
       if (pok_partitions[i].nthreads <= 1)
@@ -212,7 +214,7 @@ pok_ret_t pok_partition_init ()
       pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i] * pok_quantum_incr;
       pok_partitions[i].next_activation = pok_partitions[i].period * pok_quantum_incr + POK_GETTICK();
       pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
-      printf("pok_partitions[%d].absolute_deadline is: %d\n", i, pok_partitions[i].absolute_deadline);
+      // printf("pok_partitions[%d].absolute_deadline is: %d\n", i, pok_partitions[i].absolute_deadline);
       pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
       pok_partitions[i].remaining_time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
       pok_partitions[i].weight = ((uint64_t[])POK_CONFIG_PARTITIONS_WEIGHT)[i];
@@ -221,7 +223,6 @@ pok_ret_t pok_partition_init ()
       pok_partitions[i].sched             = ((pok_sched_t[]) POK_CONFIG_PARTITIONS_SCHEDULER) [i];
 #endif
 
-      pok_partitions[i].thread_index_high = pok_partitions[i].thread_index_low + ((uint32_t[]) POK_CONFIG_PARTITIONS_NTHREADS) [i];
       pok_partitions[i].activation        = 0;
       pok_partitions[i].period            = 0;
       pok_partitions[i].thread_index      = 0;

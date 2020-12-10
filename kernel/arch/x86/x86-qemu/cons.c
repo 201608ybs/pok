@@ -55,8 +55,9 @@ int is_received_data_ready() {
 }
 
 void read_serial(char * a) {
-  if(is_received_data_ready() != 0)
+  if(is_received_data_ready() != 0){
     *a = inb(COM1);
+  }
 }
 #endif
 

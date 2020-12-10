@@ -5,5 +5,6 @@ void *receive_job2();
 void *receive_job3();
 
 void *consume_job();
-
+void * random_job();
+void *random_generator();
 #endif
