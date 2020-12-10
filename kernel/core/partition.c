@@ -75,11 +75,9 @@ void pok_partition_setup_scheduler (const uint8_t pid)
          case POK_SCHED_GLOBAL_TIMESLICE:
             pok_partitions[pid].sched_func = &pok_sched_part_global_timeslice;
             break;
-#ifdef POK_NEEDS_SCHED_WRR
          case POK_SCHED_WRR:
             pok_partitions[pid].sched_func = &pok_sched_part_wrr;
             break;
-#endif
             /*
              * Default scheduling algorithm is Round Robin.
              * Yes, it sucks
@@ -112,10 +110,9 @@ void pok_partition_reinit (const uint8_t pid)
    pok_partitions[pid].thread_index = 0;
    pok_partitions[pid].current_thread = pok_partitions[pid].thread_index_low;
    pok_partitions[pid].prev_thread =  IDLE_THREAD; // breaks the rule of prev_thread not being idle, but it's just for init
-#ifdef POK_NEEDS_SCHED_WRR
+   
    pok_partitions[pid].current_weight = 0;
    pok_partitions[pid].current_index = -1;
-#endif
 
 #ifdef POK_NEEDS_ERROR_HANDLING
    pok_partitions[pid].thread_error = 0;
@@ -211,8 +208,8 @@ pok_ret_t pok_partition_init ()
 #ifdef POK_NEEDS_PARTITIONS_SCHED
       /* Read properties assigned to each partition through #define accordingly */
       pok_partitions[i].priority = ((uint8_t[])POK_CONFIG_PARTITIONS_PRIORITY)[i];
-      pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i];
-      pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i];
+      pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i] * pok_quantum_incr;;
+      pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i] * pok_quantum_incr;;
       pok_partitions[i].next_activation = pok_partitions[i].period + POK_GETTICK();
       pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
       pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];
@@ -234,11 +231,8 @@ pok_ret_t pok_partition_init ()
 #ifdef POK_NEEDS_SCHED_HFPPS
       pok_partitions[i].payback = 0;
 #endif /* POK_NEEDS_SCHED_HFPPS */
-
-#ifdef POK_NEEDS_SCHED_WRR
       pok_partitions[i].current_weight = 0;
       pok_partitions[i].current_index = -1;
-#endif
 
       threads_index                       = threads_index + pok_partitions[i].nthreads;
       /* Initialize the threading stuff */
@@ -314,6 +308,7 @@ pok_ret_t pok_partition_set_mode (const uint8_t pid, const pok_partition_mode_t 
 	 for (i = 0; i < pok_partitions[pid].nthreads; i++)
 	 {
 		 thread = &(pok_threads[POK_CURRENT_PARTITION.thread_index_low + i]);
+       thread->absolute_deadline = thread->deadline * pok_quantum_incr + POK_GETTICK();
 		 if ((long long)thread->period == -1) {//-1 <==> ARINC INFINITE_TIME_VALUE
 			 if(thread->state == POK_STATE_DELAYED_START) { // delayed start, the delay is in the wakeup time
 				 if(!thread->wakeup_time) {

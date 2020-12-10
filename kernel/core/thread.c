@@ -177,26 +177,23 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
 
    if (attr->period > 0)
    {
-      pok_threads[id].period          = attr->period;
-      pok_threads[id].next_activation = attr->period;
+      pok_threads[id].period          = attr->period * pok_quantum_incr;
+      pok_threads[id].next_activation = attr->period * pok_quantum_incr;
    }
 
    if (attr->deadline > 0)
    {
-      pok_threads[id].deadline      = attr->deadline;
-      pok_threads[id].absolute_deadline = POK_GETTICK() + attr->deadline;
+      pok_threads[id].deadline      = attr->deadline * pok_quantum_incr;
    }
 
 #ifdef POK_NEEDS_SCHED_HFPPS
    pok_threads[id].payback = 0;
 #endif /* POK_NEEDS_SCHED_HFPPS */
 
-#ifdef POK_NEEDS_SCHED_WRR
    if (attr->weight > 0)
       pok_threads[id].weight = attr->weight;
    else
       pok_threads[id].weight = POK_THREAD_DEFAULT_WEIGHT;
-#endif
 
    if (attr->time_capacity > 0)
    {

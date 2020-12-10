@@ -30,7 +30,7 @@
 #define PIT_BASE 0x40
 #define PIT_IRQ 0
 
-static uint64_t pok_prev_tick_value, pok_counter_ns_incr, pok_quantum_incr;
+uint64_t pok_prev_tick_value, pok_counter_ns_incr, pok_quantum_incr;
 
 uint32_t pit_freq;
 

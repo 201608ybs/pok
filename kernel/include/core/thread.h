@@ -34,7 +34,7 @@
 #define KERNEL_THREAD		POK_CONFIG_NB_THREADS -2
 #define IDLE_THREAD        POK_CONFIG_NB_THREADS -1
 
-#define POK_THREAD_SCHED_TIME_SLICE 20000
+#define POK_THREAD_SCHED_TIME_SLICE 2
 #define POK_THREAD_DEFAULT_TIME_CAPACITY 10
 /* Set default weight to 1 because we thinks it is not important if user doesn't set the weight */
 #define POK_THREAD_DEFAULT_WEIGHT 1
@@ -74,9 +74,7 @@ typedef struct
 #ifdef POK_NEEDS_SCHED_HFPPS
 	 uint64_t	payback; /**< Payback for HFPPS scheduling algorithm */
 #endif /* POK_NEEDS_SCHED_HFPPS */
-#ifdef POK_NEEDS_SCHED_WRR
-	uint64_t	weight;
-#endif
+	uint8_t	weight;
 	 void			 *entry;
 	 uint8_t		 partition;
 	 uint32_t		 sp;
@@ -95,9 +93,7 @@ typedef struct
 	 uint64_t     time_capacity;
 	 uint32_t     stack_size;
 	 pok_state_t  state;
-#ifdef POK_NEEDS_SCHED_WRR
-	uint64_t	  weight;	/* weight of the thread */
-#endif
+	 uint8_t	  weight;	/* weight of the thread */
 } pok_thread_attr_t;
 /*
  * Attributes given to create a thread

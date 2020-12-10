@@ -34,6 +34,7 @@
 #define POK_TIMER_QUANTUM 1000
 
 extern uint64_t pok_tick_counter;
+extern uint64_t pok_quantum_incr;
 
 #define CLOCK_HANDLER pok_tick_counter += 10000; pok_sched (); // 10000 because freq (POK_TIMER_FREQUENCY) is 10e5 and time (pok_tick_counter) is in nanoseconds: 10e9/POK_TIMER_FREQUENCY
 

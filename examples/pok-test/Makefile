@@ -7,7 +7,8 @@ include $(POK_PATH)/misc/mk/common-$(ARCH).mk
 
 TARGET=$(shell pwd)/pok.elf
 ARCHIVE=$(shell pwd)/partitions.cpio
-PARTITIONS=pr1/pr1.elf
+#PARTITIONS=pr1/pr1.elf
+PARTITIONS=pr2/pr2.elf pr3/pr3.elf pr4/pr4.elf
 KERNEL=kernel/kernel.lo
 
 all: build-regular
@@ -22,8 +23,12 @@ build-model:
 build-kernel:
 	$(CD) kernel && $(MAKE)
 
+# partitions:
+# 	$(CD) pr1 && $(MAKE)  
 partitions:
-	$(CD) pr1 && $(MAKE)  
+	$(CD) pr2 && $(MAKE)
+	$(CD) pr3 && $(MAKE)
+	$(CD) pr4 && $(MAKE)
 
 clean: common-clean
 	$(RM) node_impl

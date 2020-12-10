@@ -62,6 +62,7 @@ uint32_t pok_sched_part_rms (const uint32_t ,const uint32_t,const uint32_t prev_
 /* Preemptive-FP, Preemptive-EDF, Weighted-RR Scheduler for threads */
 uint32_t pok_sched_part_fp (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
 uint32_t pok_sched_part_edf (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
+uint32_t pok_sched_get_current(uint32_t *thread_id);
 uint32_t pok_sched_part_wrr (const uint32_t ,const uint32_t,const uint32_t prev_thread,const uint32_t current_thread);
 
 /* Context switch functions */
@@ -82,8 +83,6 @@ pok_ret_t pok_sched_end_period ();
 #ifdef POK_NEEDS_PARTITIONS
 void pok_sched_activate_error_thread (void);
 #endif
-
-uint32_t pok_sched_get_current(uint32_t *thread_id);
 
 #endif /* POK_NEEDS.... */
 

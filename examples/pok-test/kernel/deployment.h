@@ -8,7 +8,7 @@
 #define POK_NEEDS_SCHED 1
 #define POK_CONFIG_PARTITIONS_SCHEDULER \
     {                                   \
-        POK_SCHED_GLOBAL_TIMESLICE      \
+        POK_SCHED_WRR     \
     }
 /* the macros added for partitions scheduling */
 // #define POK_NEEDS_PARTITIONS_SCHED 1
@@ -26,7 +26,7 @@
 // #define POK_CONFIG_NB_LOCKOBJECTS   1
 #define POK_CONFIG_NB_PARTITIONS 1
 
-#define POK_CONFIG_PARTITIONS_SIZE {120 * 1024};
+#define POK_CONFIG_PARTITIONS_SIZE {240 * 1024};
 #define POK_CONFIG_PROGRAM_NAME {"pr1/pr1.elf"};
 
 #define POK_CONFIG_SCHEDULING_SLOTS \
