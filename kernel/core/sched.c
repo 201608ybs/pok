@@ -158,8 +158,9 @@ static uint8_t pok_get_next_partition()
 
          /* All partitions have run out of time, reset their time slots */
          // TODO: handle this situation
-         if (i >= POK_CONFIG_NB_PARTITIONS)
+         if (i >= POK_CONFIG_NB_PARTITIONS){
             return pok_random_select_partition();
+         }
 
 #ifdef POK_PARTITIONS_SCHED_TIME_SLICE
          partitions_sched_time_slice = POK_PARTITIONS_SCHED_TIME_SLICE;
@@ -415,15 +416,20 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
        thread->state = POK_STATE_RUNNABLE;
      }
 #endif
-      // if (now >= thread->absolute_deadline)
-      //    printf("Thread%d missed deadline\n", new_partition->thread_index_low + i); // deadline miss
+      if (now >= thread->absolute_deadline && i < POK_CONFIG_NB_THREADS - 2 && thread->state == POK_STATE_RUNNABLE){
+         printf("[T%d] missed deadline\n", new_partition->thread_index_low + i); // deadline miss
+         printf("now is %u while deadline is %u\n", ((uint32_t)now), ((uint32_t)thread->absolute_deadline));
+      }
 
      if ((thread->state == POK_STATE_WAIT_NEXT_ACTIVATION) && (thread->next_activation <= now))
      {
+      printf("[P%dT%d] activated\n", new_partition_id, i);
        thread->state = POK_STATE_RUNNABLE;
        thread->remaining_time_capacity =  thread->time_capacity;
        thread->next_activation = thread->next_activation + thread->period;
        thread->absolute_deadline = thread->deadline + now; // reset the absolute deadline
+       new_partition->current_index = -1;
+       new_partition->current_weight = 0;
      }
    }
 
@@ -474,6 +480,8 @@ uint32_t	pok_elect_thread(uint8_t new_partition_id)
                if (pok_partitions[POK_CURRENT_THREAD.partition].sched == POK_SCHED_GLOBAL_TIMESLICE){
                   POK_CURRENT_THREAD.remaining_timeslice -= 1;
                }
+               if (POK_CURRENT_THREAD.remaining_time_capacity == 0 && POK_CURRENT_THREAD.time_capacity > 0)
+                  POK_CURRENT_THREAD.state = POK_STATE_WAIT_NEXT_ACTIVATION;
             }
             else if(POK_CURRENT_THREAD.time_capacity > 0) // Wait next activation only for thread 
                                                           // with non-infinite capacity (could be 
@@ -824,6 +832,10 @@ static uint64_t get_threads_gcd_weight(uint32_t index_low, uint32_t index_high)
          gcd_weight = (gcd_weight != 0) ? gcd(gcd_weight, pok_threads[i].weight) : pok_threads[i].weight;
       }
    }
+   
+   if (gcd_weight == 0)
+      gcd_weight = 1;
+
    return gcd_weight;
 }
 
@@ -844,17 +856,19 @@ uint32_t pok_sched_part_wrr (const uint32_t index_low, const uint32_t index_high
                               const uint32_t __attribute__((unused)) current_thread)
 {
    uint8_t partition_id = pok_threads[index_low].partition;
-   uint32_t nthreads = index_high - index_low - 1; // ignore main thread
    uint32_t res = index_low;
    uint8_t gcd_weight = get_threads_gcd_weight(index_low + 1, index_high - 1);
    uint8_t max_weight = get_threads_max_weight(index_low + 1, index_high - 1);
    pok_partition_t *partition = &(pok_partitions[partition_id]);
+   uint32_t nthreads = partition->nthreads - 1; // ignore main thread
 
    /*
     * Weighted Round-Robin Scheduling(WRR) Algorithm 
     * Refer to http://kb.linuxvirtualserver.org/wiki/Weighted_Round-Robin_Scheduling for details
     */
    while (1) {
+      // printf("current index: %d\n", partition->current_index);
+      // printf("current weight: %d\n", partition->current_weight);
       partition->current_index = (partition->current_index + 1) % nthreads;
       if (partition->current_index == 0){
          partition->current_weight = partition->current_weight - gcd_weight;

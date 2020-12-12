@@ -35,7 +35,7 @@
 #define KERNEL_THREAD		POK_CONFIG_NB_THREADS - 2
 #define IDLE_THREAD        POK_CONFIG_NB_THREADS - 1
 
-#define POK_THREAD_SCHED_TIME_SLICE 2
+#define POK_THREAD_SCHED_TIME_SLICE 1
 #define POK_THREAD_DEFAULT_TIME_CAPACITY 10
 /* Set default weight to 1 because we thinks it is not important if user doesn't set the weight */
 #define POK_THREAD_DEFAULT_WEIGHT 1

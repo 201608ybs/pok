@@ -125,6 +125,8 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
 {
    uint32_t id;
    uint32_t stack_vaddr;
+   uint64_t now;
+
    /**
     * We can create a thread only if the partition is in INIT mode
     */
@@ -154,13 +156,15 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    if (attr->period > 0)
    {
       pok_threads[id].period          = attr->period * pok_quantum_incr;
-      pok_threads[id].next_activation = attr->period * pok_quantum_incr;
    }
 
    if (attr->deadline > 0)
    {
+      now = POK_GETTICK();
       pok_threads[id].deadline = attr->deadline * pok_quantum_incr;
-      pok_threads[id].absolute_deadline = pok_threads[id].deadline + POK_GETTICK();
+      pok_threads[id].absolute_deadline = pok_threads[id].deadline + now;
+      pok_threads[id].next_activation = now + pok_threads[id].period;
+
    }
 
 #ifdef POK_NEEDS_SCHED_HFPPS
@@ -202,6 +206,8 @@ pok_ret_t pok_partition_thread_create (uint32_t*                  thread_id,
    pok_threads[id].init_stack_addr  = stack_vaddr;
    *thread_id = id;
    pok_partitions[partition_id].nthreads += 1;
+   pok_partitions[partition_id].current_index = -1;
+   pok_partitions[partition_id].current_weight = 0;
 
 #ifdef POK_NEEDS_SCHED_RMS
    if ((pok_partitions[partition_id].sched == POK_SCHED_RMS) && (id > pok_partitions[partition_id].thread_index_low))

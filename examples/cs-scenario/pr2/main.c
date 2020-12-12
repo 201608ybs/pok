@@ -22,41 +22,41 @@ int main()
   recv_idx = 0;
   cons_idx = 0;
 
-  tattr.priority = 42;
-  tattr.time_capacity = 25;
-  tattr.deadline = 200;
-  tattr.period = 200;
-  tattr.weight = 2;
+  tattr.priority = 41;
+  tattr.time_capacity = 3;
+  tattr.deadline = 20;
+  tattr.period = 40;
+  tattr.weight = 9;
   tattr.entry = receive_job1;
 
   ret = pok_thread_create(&tid, &tattr);
   printf("[P2] create receive_job1 returns %d\n", ret);
 
-  tattr.priority = 42;
-  tattr.time_capacity = 25;
-  tattr.deadline = 200;
-  tattr.period = 200;
-  tattr.weight = 2;
+  tattr.priority = 43;
+  tattr.time_capacity = 5;
+  tattr.deadline = 60;
+  tattr.period = 80;
+  tattr.weight = 5;
   tattr.entry = receive_job2;
 
   ret = pok_thread_create(&tid, &tattr);
   printf("[P2] create receive_job2 returns %d\n", ret);
 
-  tattr.priority = 42;
-  tattr.time_capacity = 25;
-  tattr.deadline = 200;
-  tattr.period = 200;
-  tattr.weight = 2;
+  tattr.priority = 44;
+  tattr.time_capacity = 10;
+  tattr.deadline = 100;
+  tattr.period = 120;
+  tattr.weight = 3;
   tattr.entry = receive_job3;
 
   ret = pok_thread_create(&tid, &tattr);
   printf("[P2] create receive_job3 returns %d\n", ret);
 
   tattr.priority = 42;
-  tattr.time_capacity = 25;
-  tattr.deadline = 200;
-  tattr.period = 200;
-  tattr.weight = 2;
+  tattr.time_capacity = 1;
+  tattr.deadline = 40;
+  tattr.period = 16;
+  tattr.weight = 6;
   tattr.entry = consume_job;
 
   ret = pok_thread_create(&tid, &tattr);

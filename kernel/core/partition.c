@@ -212,7 +212,7 @@ pok_ret_t pok_partition_init ()
       pok_partitions[i].priority = ((uint8_t[])POK_CONFIG_PARTITIONS_PRIORITY)[i];
       pok_partitions[i].period = ((uint64_t[])POK_CONFIG_PARTITIONS_PERIOD)[i] * pok_quantum_incr;;
       pok_partitions[i].deadline = ((uint64_t[])POK_CONFIG_PARTITIONS_DEADLINE)[i] * pok_quantum_incr;
-      pok_partitions[i].next_activation = pok_partitions[i].period * pok_quantum_incr + POK_GETTICK();
+      pok_partitions[i].next_activation = pok_partitions[i].period + POK_GETTICK();
       pok_partitions[i].absolute_deadline = pok_partitions[i].deadline + POK_GETTICK();
       // printf("pok_partitions[%d].absolute_deadline is: %d\n", i, pok_partitions[i].absolute_deadline);
       pok_partitions[i].time_slot = ((uint64_t[])POK_CONFIG_SCHEDULING_SLOTS)[i];

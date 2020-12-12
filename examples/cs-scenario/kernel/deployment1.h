@@ -15,11 +15,11 @@
 /* the macros added for partitions scheduling */
 #define POK_NEEDS_PARTITIONS_SCHED 1
 #define POK_PARTITIONS_SCHED_TYPE POK_SCHED_RR
-#define POK_PARTITIONS_SCHED_TIME_SLICE 10
+#define POK_PARTITIONS_SCHED_TIME_SLICE 2
 
 #define POK_CONFIG_PARTITIONS_SCHEDULER           \
     {                                             \
-        POK_SCHED_GLOBAL_TIMESLICE, POK_SCHED_EDF \
+        POK_SCHED_WRR, POK_SCHED_WRR \
     }
 
 #define POK_NEEDS_TIME 1
@@ -33,9 +33,9 @@
 
 #define POK_CONFIG_SCHEDULING_SLOTS \
     {                               \
-        100, 100                    \
+        200, 200                    \
     }
-#define POK_CONFIG_SCHEDULING_MAJOR_FRAME 200
+#define POK_CONFIG_SCHEDULING_MAJOR_FRAME 400
 #define POK_CONFIG_SCHEDULING_SLOTS_ALLOCATION \
     {                                          \
         0, 1,                                  \
@@ -49,7 +49,7 @@
     }
 #define POK_CONFIG_PARTITIONS_PERIOD \
     {                                \
-        180, 180                     \
+        300, 300                     \
     }
 #define POK_CONFIG_PARTITIONS_DEADLINE \
     {                                  \

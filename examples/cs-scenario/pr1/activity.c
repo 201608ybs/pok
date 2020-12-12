@@ -161,9 +161,7 @@ void *consume_job()
          ret = pok_time_get(&end);
          if (ret < 0)
             printf("[P1T4] pok_time_get end failed\n");
-      } while ((end - begin) < 1000000);
-      // pok_thread_sleep(10000);
-      // printf("[P1T4] mutex unlock, ret=%d\n", ret);
+      } while ((end - begin) < 200000);
    }
 }
 
