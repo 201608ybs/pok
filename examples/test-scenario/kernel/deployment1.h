@@ -14,12 +14,12 @@
 
 /* the macros added for partitions scheduling */
 #define POK_NEEDS_PARTITIONS_SCHED 1
-#define POK_PARTITIONS_SCHED_TYPE POK_SCHED_RR
+#define POK_PARTITIONS_SCHED_TYPE POK_SCHED_WRR
 #define POK_PARTITIONS_SCHED_TIME_SLICE 2
 
-#define POK_CONFIG_PARTITIONS_SCHEDULER           \
-    {                                             \
-        POK_SCHED_WRR, POK_SCHED_WRR \
+#define POK_CONFIG_PARTITIONS_SCHEDULER \
+    {                                   \
+        POK_SCHED_FP, POK_SCHED_FP    \
     }
 
 #define POK_NEEDS_TIME 1
@@ -33,7 +33,7 @@
 
 #define POK_CONFIG_SCHEDULING_SLOTS \
     {                               \
-        200, 200                    \
+        100, 100                    \
     }
 #define POK_CONFIG_SCHEDULING_MAJOR_FRAME 400
 #define POK_CONFIG_SCHEDULING_SLOTS_ALLOCATION \
@@ -45,7 +45,7 @@
 /* the macros added for partitions scheduling */
 #define POK_CONFIG_PARTITIONS_PRIORITY \
     {                                  \
-        42, 42                         \
+        41, 42                         \
     }
 #define POK_CONFIG_PARTITIONS_PERIOD \
     {                                \
@@ -57,7 +57,7 @@
     }
 #define POK_CONFIG_PARTITIONS_WEIGHT \
     {                                \
-        1, 1                         \
+        5, 1                         \
     }
 
 #define POK_CONFIG_NB_LOCKOBJECTS 2

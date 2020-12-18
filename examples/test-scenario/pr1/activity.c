@@ -217,8 +217,8 @@ void *random_generator()
          continue;
       }
       count += 1;
-      tattr.priority = rand_range(50, 60);
-      tattr.time_capacity = rand_range(30, 40);
+      tattr.priority = rand_range(30, 32);
+      tattr.time_capacity = rand_range(1, 4);
       tattr.deadline = 300;
       tattr.period = 300;
       tattr.weight = rand_range(1, 10);
